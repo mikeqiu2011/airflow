@@ -1,11 +1,13 @@
-import csv
 from datetime import datetime, timedelta
 import json
+import requests
+import csv
 from airflow import DAG
 from airflow.providers.http.sensors.http import HttpSensor
 from airflow.sensors.filesystem import FileSensor
 from airflow.operators.python import PythonOperator
-import requests
+from airflow.operators.bash import BashOperator
+
 
 default_args = {
     'owner': 'airflow',
@@ -64,4 +66,12 @@ with DAG('forex_data_pipeline', start_date=datetime(2022, 8, 21),    schedule_in
     is_download_successful = PythonOperator(
         task_id='is_download_successful',
         python_callable=download_rates,
+    )
+
+    saving_rates = BashOperator(
+        task_id='saving_rates',
+        bash_command="""
+            hdfs dfs -mkdir -p /forex &&
+            hdfs dfs -put -f $AIRFLOW_HOME/dags/files/forex_rates.json /forex
+        """
     )
