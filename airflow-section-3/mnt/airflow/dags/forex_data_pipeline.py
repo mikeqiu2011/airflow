@@ -7,6 +7,7 @@ from airflow.providers.http.sensors.http import HttpSensor
 from airflow.sensors.filesystem import FileSensor
 from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
+from airflow.providers.apache.hive.operators.hive import HiveOperator
 
 
 default_args = {
@@ -48,9 +49,9 @@ with DAG('forex_data_pipeline', start_date=datetime(2022, 8, 21),    schedule_in
     is_forex_rates_available = HttpSensor(
         task_id='is_forex_rates_available',
         http_conn_id='forex_api',
-        # endpoint='marclamberti/f45f872dea4dfd3eaa015a4a1af4b39b',
-        endpoint='todos/1',
-        response_check=lambda resp: 'title' in resp.json(),
+        endpoint='marclamberti/f45f872dea4dfd3eaa015a4a1af4b39b/raw/',
+        # endpoint='todos/1',
+        response_check=lambda resp: 'rates' in resp.json(),
         poke_interval=5,
         timeout=20
     )
@@ -70,8 +71,29 @@ with DAG('forex_data_pipeline', start_date=datetime(2022, 8, 21),    schedule_in
 
     saving_rates = BashOperator(
         task_id='saving_rates',
-        bash_command="""
-            hdfs dfs -mkdir -p /forex &&
-            hdfs dfs -put -f $AIRFLOW_HOME/dags/files/forex_rates.json /forex
-        """
+        bash_command="cp $AIRFLOW_HOME/dags/files/forex_rates.json /tmp"
+        # bash_command="""
+        #     hdfs dfs -mkdir -p /forex &&
+        #     hdfs dfs -put -f $AIRFLOW_HOME/dags/files/forex_rates.json /forex
+        # """
     )
+
+    # creating_forex_rates_table = HiveOperator(
+    #     task_id="creating_forex_rates_table",
+    #     hive_cli_conn_id="hive_conn",
+    #     hql="""
+    #         CREATE EXTERNAL TABLE IF NOT EXISTS forex_rates(
+    #             base STRING,
+    #             last_update DATE,
+    #             eur DOUBLE,
+    #             usd DOUBLE,
+    #             nzd DOUBLE,
+    #             gbp DOUBLE,
+    #             jpy DOUBLE,
+    #             cad DOUBLE
+    #             )
+    #         ROW FORMAT DELIMITED
+    #         FIELDS TERMINATED BY ','
+    #         STORED AS TEXTFILE
+    #     """
+    # )
