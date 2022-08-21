@@ -45,7 +45,7 @@ def download_rates():
 
 
 # id unique across all DAG,
-with DAG('forex_data_pipeline', start_date=datetime(2022, 8, 21),    schedule_interval='@daily', default_args=default_args, catchup=False) as dag:
+with DAG('forex_data_pipeline', start_date=datetime(2022, 8, 19),    schedule_interval='@daily', default_args=default_args, catchup=False) as dag:
     is_forex_rates_available = HttpSensor(
         task_id='is_forex_rates_available',
         http_conn_id='forex_api',
@@ -77,6 +77,10 @@ with DAG('forex_data_pipeline', start_date=datetime(2022, 8, 21),    schedule_in
         #     hdfs dfs -put -f $AIRFLOW_HOME/dags/files/forex_rates.json /forex
         # """
     )
+
+    # is_forex_rates_available.set_downstream(is_forex_file_available)
+
+    is_forex_rates_available >> is_forex_file_available >> is_download_successful >> saving_rates
 
     # creating_forex_rates_table = HiveOperator(
     #     task_id="creating_forex_rates_table",
